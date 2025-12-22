@@ -285,5 +285,5 @@ elif page == "ℹ️ About":
     * **Scikit-Learn** (Machine Learning)
     * **Streamlit** (Web App Interface)
     
-    **Developed by:** *Un Machi* 😉
+    **Developed by:** *TOTZ*
     """)
