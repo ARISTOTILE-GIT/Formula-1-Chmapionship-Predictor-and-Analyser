@@ -3,7 +3,7 @@ import pandas as pd
 import joblib
 import seaborn as sns
 import matplotlib.pyplot as plt
-import numpy as np
+import os
 
 # 1. Page Configuration
 st.set_page_config(
@@ -34,32 +34,52 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Load Data & Model
+# 3. Load Data & Model (SMART PATH FIX)
 @st.cache_data
 def load_data():
-    # Get the directory where app.py is located
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Build the full path to the CSV file
-    csv_path = os.path.join(current_dir, "f1_processed_data.csv")
-    
-    df = pd.read_csv(csv_path)
-    return df
+    try:
+        # Get the directory where app.py is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_path = os.path.join(current_dir, "f1_processed_data.csv")
+        
+        if not os.path.exists(csv_path):
+            st.error(f"❌ File not found at: {csv_path}")
+            return None
+            
+        df = pd.read_csv(csv_path)
+        return df
+    except Exception as e:
+        st.error(f"⚠️ Error loading data: {e}")
+        return None
 
 @st.cache_resource
 def load_model():
     try:
-        # Get the directory where app.py is located
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        # Build the full path to the Model file
         model_path = os.path.join(current_dir, "f1_champion_model.pkl")
         
+        if not os.path.exists(model_path):
+            st.error(f"❌ Model file not found at: {model_path}")
+            return None
+            
         model = joblib.load(model_path)
         return model
     except Exception as e:
         st.error(f"⚠️ Error loading model: {e}")
         return None
+
+# --- CRITICAL STEP: ACTUALLY LOAD THE DATA ---
+df = load_data()
+model = load_model()
+
+# Stop execution if data/model is missing
+if df is None:
+    st.error("⚠️ Data failed to load. Please check 'f1_processed_data.csv' exists in the same folder.")
+    st.stop()
+
+if model is None:
+    st.error("⚠️ Model failed to load. Please check 'f1_champion_model.pkl' exists in the same folder.")
+    st.stop()
 
 # 4. Sidebar Navigation
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/3/33/F1.svg", width=100)
@@ -120,7 +140,9 @@ elif page == "📊 Analytics Dashboard":
         st.subheader("Correlation Heatmap")
         st.write("Which stats matter most?")
         
-        corr_matrix = df[['points_per_race', 'win_rate', 'wins', 'position', 'is_champion']].corr()
+        # Select numeric columns for correlation
+        numeric_df = df.select_dtypes(include=['float64', 'int64'])
+        corr_matrix = numeric_df[['points_per_race', 'win_rate', 'wins', 'position', 'is_champion']].corr()
         
         fig2, ax2 = plt.subplots(figsize=(8, 6))
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax2)
@@ -150,7 +172,6 @@ elif page == "🔮 Prediction Page":
         
         # Prediction
         prob = model.predict_proba(features)[0][1]
-        prediction = model.predict(features)[0]
         
         col1, col2, col3 = st.columns(3)
         col1.metric("Wins", driver_stats['wins'])
@@ -287,5 +308,5 @@ elif page == "ℹ️ About":
     * **Scikit-Learn** (Machine Learning)
     * **Streamlit** (Web App Interface)
     
-    **Developed by:** *TOTZ*
+    **Developed by:** *Un Machi* 😉
     """)
