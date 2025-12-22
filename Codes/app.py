@@ -37,27 +37,29 @@ st.markdown("""
 # 3. Load Data & Model
 @st.cache_data
 def load_data():
-    df = pd.read_csv("f1_processed_data.csv")
+    # Get the directory where app.py is located
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Build the full path to the CSV file
+    csv_path = os.path.join(current_dir, "f1_processed_data.csv")
+    
+    df = pd.read_csv(csv_path)
     return df
 
 @st.cache_resource
 def load_model():
     try:
-        model = joblib.load("f1_champion_model.pkl")
+        # Get the directory where app.py is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Build the full path to the Model file
+        model_path = os.path.join(current_dir, "f1_champion_model.pkl")
+        
+        model = joblib.load(model_path)
         return model
-    except:
+    except Exception as e:
+        st.error(f"⚠️ Error loading model: {e}")
         return None
-
-df = load_data()
-model = load_model()
-
-if df is None:
-    st.error("⚠️ Data file 'f1_processed_data.csv' not found.")
-    st.stop()
-
-if model is None:
-    st.error("⚠️ Model file 'f1_champion_model.pkl' not found. Run step3_final_train.py first!")
-    st.stop()
 
 # 4. Sidebar Navigation
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/3/33/F1.svg", width=100)
