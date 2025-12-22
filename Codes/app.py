@@ -145,24 +145,52 @@ elif page == "🔮 Prediction Page":
 # --- PAGE 4: COMPARISON ---
 elif page == "🆚 Driver Comparison":
     st.title("🆚 Head-to-Head Comparison")
+    
     season_2025 = df[df['season'] == 2025]
     drivers = season_2025['driver_name'].unique()
-    c1, c2 = st.columns(2)
-    d1 = c1.selectbox("Driver A", drivers, index=0)
-    d2 = c2.selectbox("Driver B", drivers, index=1)
     
-    if st.button("Compare"):
-        s1 = season_2025[season_2025['driver_name'] == d1].iloc[0]
-        s2 = season_2025[season_2025['driver_name'] == d2].iloc[0]
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        driver1 = st.selectbox("Select Driver A", drivers, index=0) # Lando
+    with col2:
+        driver2 = st.selectbox("Select Driver B", drivers, index=1) # Max
         
-        f1 = pd.DataFrame({'points_per_race':[s1['points_per_race']], 'win_rate':[s1['win_rate']], 'wins':[s1['wins']]})
-        f2 = pd.DataFrame({'points_per_race':[s2['points_per_race']], 'win_rate':[s2['win_rate']], 'wins':[s2['wins']]})
+    if st.button("Compare Drivers"):
+        # Get Data
+        d1_stats = season_2025[season_2025['driver_name'] == driver1].iloc[0]
+        d2_stats = season_2025[season_2025['driver_name'] == driver2].iloc[0]
         
-        p1 = model.predict_proba(f1)[0][1]
-        p2 = model.predict_proba(f2)[0][1]
+        # Prepare Features
+        f1 = pd.DataFrame({'points_per_race':[d1_stats['points_per_race']], 'win_rate':[d1_stats['win_rate']], 'wins':[d1_stats['wins']]})
+        f2 = pd.DataFrame({'points_per_race':[d2_stats['points_per_race']], 'win_rate':[d2_stats['win_rate']], 'wins':[d2_stats['wins']]})
         
-        c1.info(f"Prob: {p1*100:.2f}%")
-        c2.info(f"Prob: {p2*100:.2f}%")
+        # Get Probabilities
+        prob1 = model.predict_proba(f1)[0][1]
+        prob2 = model.predict_proba(f2)[0][1]
+        
+        # Display Side-by-Side
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.subheader(driver1)
+            st.write(f"**Wins:** {d1_stats['wins']}")
+            st.write(f"**Points:** {d1_stats['points']}")
+            st.info(f"🏆 Probability: **{prob1*100:.2f}%**")
+            
+        with c2:
+            st.subheader(driver2)
+            st.write(f"**Wins:** {d2_stats['wins']}")
+            st.write(f"**Points:** {d2_stats['points']}")
+            st.info(f"🏆 Probability: **{prob2*100:.2f}%**")
+            
+        st.divider()
+        if prob1 > prob2:
+            st.success(f"🥇 **{driver1}** has a higher chance of winning!")
+        elif prob2 > prob1:
+            st.success(f"🥇 **{driver2}** has a higher chance of winning!")
+        else:
+            st.warning("It's a tie!")
 
 # --- PAGE 5: WHAT-IF ---
 elif page == "🧪 What-If Simulator":
