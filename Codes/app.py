@@ -195,17 +195,43 @@ elif page == "🆚 Driver Comparison":
 # --- PAGE 5: WHAT-IF ---
 elif page == "🧪 What-If Simulator":
     st.title("🧪 What-If Simulator")
-    w = st.slider("Wins", 0, 24, 8)
-    p = st.number_input("Points", 0, 600, 300)
-    r = 24
+    st.markdown("Adjust the stats below to see how **Championship Probability** changes.")
     
-    ppr = p/r
-    wr = w/r
+    col1, col2 = st.columns(2)
     
-    feats = pd.DataFrame({'points_per_race':[ppr], 'win_rate':[wr], 'wins':[w]})
-    prob = model.predict_proba(feats)[0][1]
+    with col1:
+        sim_wins = st.slider("Number of Wins", 0, 24, 8)
+        sim_races = st.slider("Total Races", 10, 24, 24)
+        
+    with col2:
+        sim_points = st.number_input("Total Points", 0, 600, 300)
+        
+    # Calculate derived metrics
+    sim_win_rate = sim_wins / sim_races
+    sim_ppr = sim_points / sim_races
     
-    st.metric("Probability", f"{prob*100:.2f}%")
+    st.write(f"📊 **Calculated Stats:** Win Rate: `{sim_win_rate*100:.1f}%` | Points/Race: `{sim_ppr:.1f}`")
+    
+    # Predict
+    sim_features = pd.DataFrame({
+        'points_per_race': [sim_ppr],
+        'win_rate': [sim_win_rate],
+        'wins': [sim_wins]
+    })
+    
+    sim_prob = model.predict_proba(sim_features)[0][1]
+    
+    # Gauge Chart (Simple Progress Bar for now)
+    st.subheader("Champion Probability")
+    st.progress(sim_prob)
+    st.metric(label="Probability", value=f"{sim_prob*100:.2f}%")
+    
+    if sim_prob > 0.8:
+        st.success("🔥 This performance is **Legendary**!")
+    elif sim_prob > 0.5:
+        st.info("👍 Good chance of winning.")
+    else:
+        st.error("👎 Not enough to win the title.")
 
 # --- PAGE 6: TEAM IMPACT ANALYSIS (NEW) ---
 elif page == "🛠️ Team Impact Analysis":
