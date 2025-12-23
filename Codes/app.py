@@ -117,30 +117,76 @@ elif page == "📊 Analytics Dashboard":
         st.pyplot(fig2)
 
 # --- PAGE 3: PREDICTION ---
+# --- PAGE 3: PREDICTION PAGE (SMART FIX 🧠) ---
 elif page == "🔮 Prediction Page":
     st.title("🔮 2025 Championship Predictor")
+    
+    st.subheader("Select a Driver from the 2025 Grid")
+    
     season_2025 = df[df['season'] == 2025]
-    selected_driver = st.selectbox("Choose Driver", season_2025['driver_name'].unique())
+    driver_list = season_2025['driver_name'].unique()
+    selected_driver = st.selectbox("Choose Driver", driver_list, index=0)
     
     if st.button("Predict Probability"):
-        stats = season_2025[season_2025['driver_name'] == selected_driver].iloc[0]
-        feats = pd.DataFrame({'points_per_race':[stats['points_per_race']], 'win_rate':[stats['win_rate']], 'wins':[stats['wins']]})
+        driver_stats = season_2025[season_2025['driver_name'] == selected_driver].iloc[0]
         
-        prob = model.predict_proba(feats)[0][1]
-        prediction = model.predict(feats)[0]
+        # Features for model
+        features = pd.DataFrame({
+            'points_per_race': [driver_stats['points_per_race']],
+            'win_rate': [driver_stats['win_rate']],
+            'wins': [driver_stats['wins']]
+        })
         
-        col1, col2 = st.columns(2)
-        col1.metric("Current Points", stats['points'])
-        col2.metric("Win Rate", f"{stats['win_rate']*100:.1f}%")
+        # Get Probability for Selected Driver
+        prob = model.predict_proba(features)[0][1]
+        
+        # --- SMART LOGIC: Compare with ALL drivers in 2025 ---
+        # "Ivaru probability kammiya irundhalum, mathavangala vida mass ah?" nu paakrom.
+        
+        all_probs = {}
+        for d in driver_list:
+            d_stats = season_2025[season_2025['driver_name'] == d].iloc[0]
+            d_feats = pd.DataFrame({
+                'points_per_race': [d_stats['points_per_race']], 
+                'win_rate': [d_stats['win_rate']], 
+                'wins': [d_stats['wins']]
+            })
+            p = model.predict_proba(d_feats)[0][1]
+            all_probs[d] = p
+            
+        # Find who has the HIGHEST probability in 2025
+        best_driver = max(all_probs, key=all_probs.get)
+        best_prob = all_probs[best_driver]
+        
+        # --- DISPLAY RESULTS ---
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Wins", driver_stats['wins'])
+        col2.metric("Points", driver_stats['points'])
+        col3.metric("Win Rate", f"{driver_stats['win_rate']*100:.1f}%")
         
         st.divider()
-        st.metric("Championship Probability", f"{prob*100:.2f}%")
+        st.subheader("Prediction Result")
         
-        if prediction == 1 or prob > 0.4:
-            st.success(f"🏆 **YES!** {selected_driver} is a Champion Contender!")
+        # Progress bar
+        st.progress(prob)
+        st.metric(label="Championship Probability", value=f"{prob*100:.2f}%")
+        
+        # DECISION TIME 🏆
+        if selected_driver == best_driver:
+            st.success(f"🏆 **YES!** {selected_driver} is the **Statistical Favorite** to win the 2025 Championship!")
+            st.markdown(f"*(Even though the probability is tight, he is ranked #1 among all drivers)*")
             st.balloons()
+        elif prob > 0.4:
+            st.success(f"🔥 **Strong Contender!** {selected_driver} has a great chance.")
         else:
-            st.error(f"❌ Unlikely to win.")
+            st.error(f"❌ **Unlikely.** The model predicts {best_driver} has a better chance ({best_prob*100:.1f}%).")
+            
+        # Optional: Show Top 3 Contenders
+        with st.expander("👀 View Top 3 Contenders (Why is it tight?)"):
+            st.write("This season is very competitive! Here are the top probabilities:")
+            sorted_probs = sorted(all_probs.items(), key=lambda x: x[1], reverse=True)[:3]
+            for rank, (d_name, d_prob) in enumerate(sorted_probs, 1):
+                st.write(f"**#{rank} {d_name}**: {d_prob*100:.2f}%")
 
 # --- PAGE 4: COMPARISON ---
 elif page == "🆚 Driver Comparison":
